@@ -1,0 +1,41 @@
+name: Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Configure RDP
+        shell: pwsh
+        run: |
+          $Password = ConvertTo-SecureString "123" -AsPlainText -Force
+          Set-LocalUser -Name "runneradmin" -Password $Password
+
+          Set-ItemProperty `
+            -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" `
+            -Name "fDenyTSConnections" -Value 0
+
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+      - name: Show connection details
+        shell: pwsh
+        run: |
+          Write-Host "Tailscale IP:"
+          tailscale ip -4
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: 123"
+
+      - name: Keep runner active
+        shell: pwsh
+        run: |
+          while ($true) {
+            Start-Sleep -Seconds 60
+          }
